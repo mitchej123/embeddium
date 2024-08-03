@@ -1,11 +1,9 @@
 package me.jellysquid.mods.sodium.client.gl.tessellation;
 
 import me.jellysquid.mods.sodium.client.gl.attribute.GlVertexAttributeBinding;
-import me.jellysquid.mods.sodium.client.gl.buffer.GlBufferTarget;
 import me.jellysquid.mods.sodium.client.gl.device.CommandList;
-import me.jellysquid.mods.sodium.client.gl.func.GlFunctions;
-
-import com.mojang.blaze3d.platform.GlStateManager;
+import org.lwjgl.opengl.GL20C;
+import org.lwjgl.opengl.GL30C;
 
 public abstract class GlAbstractTessellation implements GlTessellation {
     protected final GlPrimitiveType primitiveType;
@@ -23,16 +21,17 @@ public abstract class GlAbstractTessellation implements GlTessellation {
 
     protected void bindAttributes(CommandList commandList) {
         for (TessellationBinding binding : this.bindings) {
-            commandList.bindBuffer(GlBufferTarget.ARRAY_BUFFER,  binding.getBuffer());
+            commandList.bindBuffer(binding.target(), binding.buffer());
 
-            for (GlVertexAttributeBinding attrib : binding.getAttributeBindings()) {
-            	GlStateManager.vertexAttribPointer(attrib.getIndex(), attrib.getCount(), attrib.getFormat(), attrib.isNormalized(),
-                        attrib.getStride(), attrib.getPointer());
-            	GlStateManager.enableVertexAttribArray(attrib.getIndex());
-
-                if (binding.isInstanced()) {
-                    GlFunctions.INSTANCED_ARRAY.glVertexAttribDivisor(attrib.getIndex(), 1);
+            for (GlVertexAttributeBinding attrib : binding.attributeBindings()) {
+                if (attrib.isIntType()) {
+                    GL30C.glVertexAttribIPointer(attrib.getIndex(), attrib.getCount(), attrib.getFormat(),
+                            attrib.getStride(), attrib.getPointer());
+                } else {
+                    GL20C.glVertexAttribPointer(attrib.getIndex(), attrib.getCount(), attrib.getFormat(), attrib.isNormalized(),
+                            attrib.getStride(), attrib.getPointer());
                 }
+                GL20C.glEnableVertexAttribArray(attrib.getIndex());
             }
         }
     }

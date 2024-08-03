@@ -7,4 +7,8 @@ public class MathUtil {
     public static boolean isPowerOfTwo(int n) {
         return ((n & (n - 1)) == 0);
     }
+
+    public static long toMib(long bytes) {
+        return bytes / (1024L * 1024L); // 1 MiB = 1048576 (2^20) bytes
+    }
 }

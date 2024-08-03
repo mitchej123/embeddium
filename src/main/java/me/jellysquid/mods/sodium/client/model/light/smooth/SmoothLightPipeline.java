@@ -5,20 +5,19 @@ import me.jellysquid.mods.sodium.client.model.light.data.LightDataAccess;
 import me.jellysquid.mods.sodium.client.model.light.data.QuadLightData;
 import me.jellysquid.mods.sodium.client.model.quad.ModelQuadView;
 import me.jellysquid.mods.sodium.client.model.quad.properties.ModelQuadFlags;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
 
 /**
  * A light pipeline which produces smooth interpolated lighting and ambient occlusion for model quads. This
  * implementation makes a number of improvements over vanilla's own "smooth lighting" option. In no particular order:
  *
- * - Ambient occlusion of block slopes underwater no longer produces broken results (fixes MC-149211)
- * - Smooth lighting now works when underwater (fixes MC-68129)
  * - Corner blocks are now selected from the correct set of neighbors above block faces (fixes MC-148689 and MC-12558)
- * - Shading issues caused by anisotropy are fixed by re-orientating quads to a consistent ordering (fixes MC-136302)
+ * - Shading issues caused by anisotropy are fixed by re-orientating quads to a consistent ordering (fixes MC-138211)
  * - Inset block faces are correctly shaded by their neighbors, fixing a number of problems with non-full blocks such as
  *   grass paths (fixes MC-11783 and MC-108621)
+ * - Blocks next to emissive blocks are too bright (MC-260989)
  * - Synchronization issues between the main render thread's light engine and chunk build worker threads are corrected
  *   by copying light data alongside block states, fixing a number of inconsistencies in baked chunks (no open issue)
  *
@@ -65,12 +64,12 @@ public class SmoothLightPipeline implements LightPipeline {
     }
 
     @Override
-    public void calculate(ModelQuadView quad, BlockPos pos, QuadLightData out, Direction cullFace, Direction face, boolean shade) {
+    public void calculate(ModelQuadView quad, BlockPos pos, QuadLightData out, Direction cullFace, Direction lightFace, boolean shade) {
         this.updateCachedData(pos.asLong());
 
         int flags = quad.getFlags();
 
-        final AoNeighborInfo neighborInfo = AoNeighborInfo.get(face);
+        final AoNeighborInfo neighborInfo = AoNeighborInfo.get(lightFace);
 
         // If the model quad is aligned to the block's face and covers it entirely, we can take a fast path and directly
         // map the corner values onto this quad's vertices. This covers most situations during rendering and provides
@@ -78,17 +77,22 @@ public class SmoothLightPipeline implements LightPipeline {
         // To match vanilla behavior, also treat the face as aligned if it is parallel and the block state is a full cube
         if ((flags & ModelQuadFlags.IS_ALIGNED) != 0 || ((flags & ModelQuadFlags.IS_PARALLEL) != 0 && LightDataAccess.unpackFC(this.lightCache.get(pos)))) {
             if ((flags & ModelQuadFlags.IS_PARTIAL) == 0) {
-                this.applyAlignedFullFace(neighborInfo, pos, face, out);
+                this.applyAlignedFullFace(neighborInfo, pos, lightFace, out);
             } else {
-                this.applyAlignedPartialFace(neighborInfo, quad, pos, face, out);
+                this.applyAlignedPartialFace(neighborInfo, quad, pos, lightFace, out);
             }
         } else if ((flags & ModelQuadFlags.IS_PARALLEL) != 0) {
-            this.applyParallelFace(neighborInfo, quad, pos, face, out);
+            this.applyParallelFace(neighborInfo, quad, pos, lightFace, out);
         } else {
-            this.applyNonParallelFace(neighborInfo, quad, pos, face, out);
+            this.applyNonParallelFace(neighborInfo, quad, pos, lightFace, out);
         }
 
-        this.applySidedBrightness(out, face, shade);
+        this.applySidedBrightness(out, lightFace, shade);
+    }
+
+    @Override
+    public void reset() {
+        this.cachedPos = Long.MIN_VALUE;
     }
 
     /**
@@ -140,7 +144,7 @@ public class SmoothLightPipeline implements LightPipeline {
 
             // If the quad is approximately grid-aligned (not inset) to the other side of the block, avoid unnecessary
             // computation by treating it is as aligned
-            if (MathHelper.approximatelyEquals(depth, 1.0F)) {
+            if (Mth.equal(depth, 1.0F)) {
                 this.applyAlignedPartialFaceVertex(pos, dir, weights, i, out, false);
             } else {
                 // Blend the occlusion factor between the blocks directly beside this face and the blocks above it
@@ -166,9 +170,9 @@ public class SmoothLightPipeline implements LightPipeline {
             float depth = neighborInfo.getDepth(cx, cy, cz);
 
             // If the quad is approximately grid-aligned (not inset), avoid unnecessary computation by treating it is as aligned
-            if (MathHelper.approximatelyEquals(depth, 0.0F)) {
+            if (Mth.equal(depth, 0.0F)) {
                 this.applyAlignedPartialFaceVertex(pos, dir, weights, i, out, true);
-            } else if (MathHelper.approximatelyEquals(depth, 1.0F)) {
+            } else if (Mth.equal(depth, 1.0F)) {
                 this.applyAlignedPartialFaceVertex(pos, dir, weights, i, out, false);
             } else {
                 // Blend the occlusion factor between the blocks directly beside this face and the blocks above it
@@ -216,7 +220,7 @@ public class SmoothLightPipeline implements LightPipeline {
     }
 
     private void applySidedBrightness(QuadLightData out, Direction face, boolean shade) {
-        float brightness = this.lightCache.getWorld().getBrightness(face, shade);
+        float brightness = this.lightCache.getWorld().getShade(face, shade);
         float[] br = out.br;
 
         for (int i = 0; i < br.length; i++) {

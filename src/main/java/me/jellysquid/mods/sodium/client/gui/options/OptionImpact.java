@@ -1,24 +1,23 @@
 package me.jellysquid.mods.sodium.client.gui.options;
 
-import net.minecraft.text.TranslatableText;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TranslatableComponent;
 
-public enum OptionImpact {
-    LOW(Formatting.GREEN, new TranslatableText("sodium.option_impact.low").getString()),
-    MEDIUM(Formatting.YELLOW, new TranslatableText("sodium.option_impact.medium").getString()),
-    HIGH(Formatting.GOLD, new TranslatableText("sodium.option_impact.high").getString()),
-    EXTREME(Formatting.RED, new TranslatableText("sodium.option_impact.extreme").getString()),
-    VARIES(Formatting.WHITE, new TranslatableText("sodium.option_impact.varies").getString());
+public enum OptionImpact implements TextProvider {
+    LOW(ChatFormatting.GREEN, "sodium.option_impact.low"),
+    MEDIUM(ChatFormatting.YELLOW, "sodium.option_impact.medium"),
+    HIGH(ChatFormatting.GOLD, "sodium.option_impact.high"),
+    VARIES(ChatFormatting.WHITE, "sodium.option_impact.varies");
 
-    private final Formatting color;
-    private final String text;
+    private final Component text;
 
-    OptionImpact(Formatting color, String text) {
-        this.color = color;
-        this.text = text;
+    OptionImpact(ChatFormatting color, String text) {
+        this.text = new TranslatableComponent(text).withStyle(color);
     }
 
-    public String toDisplayString() {
-        return this.color + this.text;
+    @Override
+    public Component getLocalizedName() {
+        return this.text;
     }
 }

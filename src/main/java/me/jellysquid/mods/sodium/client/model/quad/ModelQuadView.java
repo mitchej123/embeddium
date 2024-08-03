@@ -1,9 +1,8 @@
 package me.jellysquid.mods.sodium.client.model.quad;
 
 import me.jellysquid.mods.sodium.client.model.quad.properties.ModelQuadFlags;
-import net.minecraft.client.texture.Sprite;
-
-import java.nio.ByteBuffer;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.core.Direction;
 
 /**
  * Provides a read-only view of a model quad. For mutable access to a model quad, see {@link ModelQuadViewMutable}.
@@ -40,19 +39,15 @@ public interface ModelQuadView {
     float getTexV(int idx);
 
     /**
-     * @return The integer bit flags containing the {@link ModelQuadFlags} for this quad
-     */
-    int getFlags();
-
-    /**
-     * @return The lightmap texture coordinates for the vertex at index {@param idx}
+     * @return The packed lightmap coordinates for the vertex at index {@param idx},
+     * or zero if regular lighting should be used.
      */
     int getLight(int idx);
 
     /**
-     * @return The integer-encoded normal vector for the vertex at index {@param idx}
+     * @return The integer bit flags containing the {@link ModelQuadFlags} for this quad
      */
-    int getNormal(int idx);
+    int getFlags();
 
     /**
      * @return The color index of this quad.
@@ -60,26 +55,20 @@ public interface ModelQuadView {
     int getColorIndex();
 
     /**
-     * Copies this quad's data into the specified buffer starting at the given position.
-     * @param buf The buffer to write this quad's data to
-     * @param position The starting byte index to write to
-     */
-    default void copyInto(ByteBuffer buf, int position) {
-        for (int i = 0; i < 4; i++) {
-            buf.putFloat(position, this.getX(i));
-            buf.putFloat(position + 4, this.getY(i));
-            buf.putFloat(position + 8, this.getZ(i));
-            buf.putInt(position + 12, this.getColor(i));
-            buf.putFloat(position + 16, this.getTexU(i));
-            buf.putFloat(position + 20, this.getTexV(i));
-            buf.putInt(position + 24, this.getLight(i));
-
-            position += 28;
-        }
-    }
-
-    /**
      * @return The sprite texture used by this quad, or null if none is attached
      */
-    Sprite rubidium$getSprite();
+    TextureAtlasSprite getSprite();
+
+    /**
+     * @return The face used by this quad for lighting effects
+     */
+    Direction getLightFace();
+
+    int getForgeNormal(int idx);
+
+    default boolean hasColor() {
+        return this.getColorIndex() != -1;
+    }
+
+    default boolean hasAmbientOcclusion() { return true; }
 }

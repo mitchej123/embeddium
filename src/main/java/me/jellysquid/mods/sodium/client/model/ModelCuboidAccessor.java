@@ -1,7 +1,11 @@
 package me.jellysquid.mods.sodium.client.model;
 
-import net.minecraft.client.model.ModelPart;
+import me.jellysquid.mods.sodium.client.render.immediate.model.ModelCuboid;
+import org.jetbrains.annotations.Nullable;
 
 public interface ModelCuboidAccessor {
-    ModelPart.Quad[] getQuads();
+    ModelCuboid sodium$copy();
+
+    @Nullable
+    ModelCuboid embeddium$getSimpleCuboid();
 }

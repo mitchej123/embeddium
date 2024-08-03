@@ -7,18 +7,17 @@ import java.util.function.Function;
 
 public enum ChunkFogMode {
     NONE(ChunkShaderFogComponent.None::new, ImmutableList.of()),
-    LINEAR(ChunkShaderFogComponent.Linear::new, ImmutableList.of("USE_FOG", "USE_FOG_LINEAR")),
-    EXP2(ChunkShaderFogComponent.Exp2::new, ImmutableList.of("USE_FOG", "USE_FOG_EXP2"));
+    SMOOTH(ChunkShaderFogComponent.Smooth::new, ImmutableList.of("USE_FOG", "USE_FOG_SMOOTH"));
 
-    private final Function<ChunkProgram, ChunkShaderFogComponent> factory;
+    private final Function<ShaderBindingContext, ChunkShaderFogComponent> factory;
     private final List<String> defines;
 
-    ChunkFogMode(Function<ChunkProgram, ChunkShaderFogComponent> factory, List<String> defines) {
+    ChunkFogMode(Function<ShaderBindingContext, ChunkShaderFogComponent> factory, List<String> defines) {
         this.factory = factory;
         this.defines = defines;
     }
 
-    public Function<ChunkProgram, ChunkShaderFogComponent> getFactory() {
+    public Function<ShaderBindingContext, ChunkShaderFogComponent> getFactory() {
         return this.factory;
     }
 

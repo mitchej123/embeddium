@@ -1,13 +1,7 @@
 package org.embeddedt.embeddium.api;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.BlockRenderView;
-import net.minecraftforge.client.model.data.IModelData;
-
+import me.jellysquid.mods.sodium.client.render.chunk.compile.pipeline.BlockRenderContext;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -40,12 +34,12 @@ public class BlockRendererRegistry {
     /**
      * Get a list of custom renderers for the given block & context.
      */
-    public void fillCustomRenderers(List<Renderer> resultList, BlockState state, BlockPos pos, BlockRenderView world) {
+    public void fillCustomRenderers(List<Renderer> resultList, BlockRenderContext context) {
         if(renderPopulators.isEmpty())
             return;
 
         for(RenderPopulator populator : renderPopulators) {
-            populator.fillCustomRenderers(resultList, state, pos, world);
+            populator.fillCustomRenderers(resultList, context);
         }
     }
 
@@ -62,10 +56,10 @@ public class BlockRendererRegistry {
     }
 
     public interface RenderPopulator {
-        void fillCustomRenderers(List<Renderer> resultList, BlockState state, BlockPos pos, BlockRenderView world);
+        void fillCustomRenderers(List<Renderer> resultList, BlockRenderContext ctx);
 
         static RenderPopulator forRenderer(Renderer renderer) {
-            return (resultList, state, pos, world) -> resultList.add(renderer);
+            return (resultList, ctx) -> resultList.add(renderer);
         }
     }
 
@@ -73,21 +67,11 @@ public class BlockRendererRegistry {
         /**
          * Provides the opportunity to render a block in the subchunk using the given {@link VertexConsumer}.
          *
-         * @param state the state of the block
-         * @param pos the position of the block in the world
-         * @param world the thread-safe subchunk access
-         * @param stack a matrix to use for positioning the block
+         * @param ctx the rendering context
          * @param consumer the vertex consumer to add block meshes to
          * @param random the RNG used for rendering
-         * @param modelData the model data for this block
          * @return the result of the rendering
          */
-        RenderResult renderBlock(BlockState state,
-                BlockPos pos,
-                BlockRenderView world,
-                VertexConsumer consumer,
-                Random random,
-                IModelData modelData
-        );
+        RenderResult renderBlock(BlockRenderContext ctx, Random random, VertexConsumer consumer);
     }
 }

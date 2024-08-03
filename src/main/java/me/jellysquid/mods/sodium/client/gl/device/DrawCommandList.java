@@ -1,11 +1,9 @@
 package me.jellysquid.mods.sodium.client.gl.device;
 
-import java.nio.IntBuffer;
+import me.jellysquid.mods.sodium.client.gl.tessellation.GlIndexType;
 
 public interface DrawCommandList extends AutoCloseable {
-    void multiDrawArrays(IntBuffer first, IntBuffer count);
-
-    void multiDrawArraysIndirect(long pointer, int count, int stride);
+    void multiDrawElementsBaseVertex(MultiDrawBatch batch, GlIndexType indexType);
 
     void endTessellating();
 

@@ -1,53 +1,85 @@
 package me.jellysquid.mods.sodium.client.gui.widgets;
 
+import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.vertex.PoseStack;
 import me.jellysquid.mods.sodium.client.util.Dim2i;
-import net.minecraft.client.gui.Drawable;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.components.Widget;
+import net.minecraft.network.chat.Component;
+import org.embeddedt.embeddium.gui.theme.DefaultColors;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class FlatButtonWidget extends AbstractWidget implements Drawable {
-    private final Dim2i dim;
-    private final Text label;
+import java.util.Objects;
+
+public class FlatButtonWidget extends AbstractWidget implements Widget {
+    protected final Dim2i dim;
     private final Runnable action;
+
+    private @NotNull Style style = Style.defaults();
 
     private boolean selected;
     private boolean enabled = true;
     private boolean visible = true;
+    private boolean leftAligned;
 
-    public FlatButtonWidget(Dim2i dim, String label, Runnable action) {
-        this(dim, new LiteralText(label), action);
-    }
+    private Component label;
 
-    public FlatButtonWidget(Dim2i dim, Text label, Runnable action) {
+    public FlatButtonWidget(Dim2i dim, Component label, Runnable action) {
         this.dim = dim;
         this.label = label;
         this.action = action;
     }
 
+    protected int getLeftAlignedTextOffset() {
+        return 10;
+    }
+
+    protected boolean isHovered(int mouseX, int mouseY) {
+        return this.dim.containsCursor(mouseX, mouseY);
+    }
+
     @Override
-    public void render(MatrixStack matrixStack, int mouseX, int mouseY, float delta) {
+    public void render(PoseStack drawContext, int mouseX, int mouseY, float delta) {
         if (!this.visible) {
             return;
         }
 
-        boolean hovered = this.dim.containsCursor(mouseX, mouseY);
+        this.hovered = this.isHovered(mouseX, mouseY);
 
-        int backgroundColor = this.enabled ? (hovered ? 0xE0000000 : 0x90000000) : 0x60000000;
-        int textColor = this.enabled ? 0xFFFFFFFF : 0x90FFFFFF;
+        int backgroundColor = this.enabled ? (this.hovered ? this.style.bgHovered : this.style.bgDefault) : this.style.bgDisabled;
+        int textColor = this.enabled ? this.style.textDefault : this.style.textDisabled;
 
-        int strWidth = this.font.getWidth(this.label);
+        int strWidth = this.font.width(this.label);
 
-        this.drawRect(this.dim.getOriginX(), this.dim.getOriginY(), this.dim.getLimitX(), this.dim.getLimitY(), backgroundColor);
-        this.drawString(matrixStack, this.label.getString(), this.dim.getCenterX() - (strWidth / 2), this.dim.getCenterY() - 4, textColor);
+        this.drawRect(drawContext, this.dim.x(), this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), backgroundColor);
+        int textX;
+        if (this.leftAligned) {
+            textX = this.dim.x() + this.getLeftAlignedTextOffset();
+        } else {
+            textX = this.dim.getCenterX() - (strWidth / 2);
+        }
+        this.drawString(drawContext, this.label, textX, this.dim.getCenterY() - 4, textColor);
 
         if (this.enabled && this.selected) {
-            this.drawRect(this.dim.getOriginX(), this.dim.getLimitY() - 1, this.dim.getLimitX(), this.dim.getLimitY(), 0xFF94E4D3);
+            this.drawRect(drawContext, this.dim.x(), this.leftAligned ? this.dim.y() : (this.dim.getLimitY() - 1), this.leftAligned ? (this.dim.x() + 1) : this.dim.getLimitX(), this.dim.getLimitY(), DefaultColors.ELEMENT_ACTIVATED);
         }
+        if (this.enabled && this.isFocused()) {
+            this.drawBorder(drawContext, this.dim.x(), this.dim.y(), this.dim.getLimitX(), this.dim.getLimitY(), -1);
+        }
+    }
+
+    public void setStyle(@NotNull Style style) {
+        Objects.requireNonNull(style);
+
+        this.style = style;
     }
 
     public void setSelected(boolean selected) {
         this.selected = selected;
+    }
+
+    public void setLeftAligned(boolean leftAligned) {
+        this.leftAligned = leftAligned;
     }
 
     @Override
@@ -57,13 +89,30 @@ public class FlatButtonWidget extends AbstractWidget implements Drawable {
         }
 
         if (button == 0 && this.dim.containsCursor(mouseX, mouseY)) {
-            this.action.run();
-            this.playClickSound();
+            doAction();
 
             return true;
         }
 
         return false;
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (!this.isFocused())
+            return false;
+
+        if (keySelected(keyCode)) {
+            doAction();
+            return true;
+        }
+
+        return false;
+    }
+
+    private void doAction() {
+        this.action.run();
+        this.playClickSound();
     }
 
     public void setEnabled(boolean enabled) {
@@ -72,5 +121,33 @@ public class FlatButtonWidget extends AbstractWidget implements Drawable {
 
     public void setVisible(boolean visible) {
         this.visible = visible;
+    }
+
+    public void setLabel(Component text) {
+        this.label = text;
+    }
+
+    public Component getLabel() {
+        return this.label;
+    }
+
+    public Dim2i getDimensions() {
+        return this.dim;
+    }
+
+    public static class Style {
+        public int bgHovered, bgDefault, bgDisabled;
+        public int textDefault, textDisabled;
+
+        public static Style defaults() {
+            var style = new Style();
+            style.bgHovered = 0xE0202020;
+            style.bgDefault = 0x90000000;
+            style.bgDisabled = 0x60000000;
+            style.textDefault = 0xFFFFFFFF;
+            style.textDisabled = 0x90FFFFFF;
+
+            return style;
+        }
     }
 }
